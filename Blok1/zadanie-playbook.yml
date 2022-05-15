@@ -1,0 +1,135 @@
+- name: Blok 1 IaaS
+  hosts: all
+  become: true
+  tasks:
+    - name: Zalozenie uzytkownika 'gmanos'
+      ansible.builtin.user:
+        name: gmanos
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Instalacja daemona systemd-timesync
+      ansible.builtin.apt:
+        name: systemd-timesyncd
+        state: present
+
+    - name: Ustawienie serwera NTP na ntp.assecobs.pl
+      ansible.builtin.shell: sed -i 's|#NTP=|NTP=ntp.assecobs.pl|i' /etc/systemd/timesyncd.conf
+
+    - name: Restart daemona systemd-timesyncd
+      ansible.builtin.systemd:
+        state: restarted
+        name: systemd-timesyncd
+
+    - name: Pobranie niezbednych pakietow do uruchomienie kontenerow LXC
+      ansible.builtin.apt:
+        name:
+          - lxc
+          - libvirt0
+          - libpam-cgfs
+          - bridge-utils
+          - uidmap
+          - python3-lxc
+        state: present
+
+    - name: Konfiguracja LXC do uruchomienia nieuprzywilejowanych kontenerow prez roota
+      ansible.builtin.shell: |
+        usermod -v 300000-365536 -w 300000-365536 root
+        MS_UID="$(grep "$(id -un)" /etc/subuid  | cut -d : -f 2)"
+        ME_UID="$(grep "$(id -un)" /etc/subuid  | cut -d : -f 3)"
+        MS_GID="$(grep "$(id -un)" /etc/subgid  | cut -d : -f 2)"
+        ME_GID="$(grep "$(id -un)" /etc/subgid  | cut -d : -f 3)"
+        echo "lxc.idmap = u 0 $MS_UID $ME_UID" >> /etc/lxc/default.conf
+        echo "lxc.idmap = g 0 $MS_GID $ME_GID" >> /etc/lxc/default.conf
+      args:
+        executable: /bin/bash
+
+    - name: Uruchomienie kontenerow, limit RAMu 1GB
+      tags:
+        - t
+      environment:
+        DOWNLOAD_KEYSERVER: "hkp://keyserver.ubuntu.com"
+      community.general.lxc_container:
+        name: '{{ item }}'
+        template: download
+        template_options: --dist ubuntu --release bionic --arch amd64 
+        state: started
+        container_config:
+          - "lxc.cgroup2.memory.max=1073741824"
+      with_items:
+        - kontener1
+        - kontener2
+
+    - name: Instalacja pakietow na kontenerach
+      tags:
+        - t11
+      community.general.lxc_container:
+        name: '{{ item }}'
+        container_command: |
+          apt-get update
+          apt-get install python3 python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools python3-venv nginx -y
+          mkdir ~/flaskapp
+          cd ~/flaskapp
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install wheel gunicorn flask
+          deactivate
+      with_items:
+        - kontener1
+        - kontener2
+  
+    - name: Przeslanie aplikacji na serwer
+      tags:
+        - t2
+      copy:
+        src: ./flaskapp.py
+        dest: /var/lib/lxc/{{ item }}/rootfs/root/flaskapp/
+      with_items:
+        - kontener1
+        - kontener2
+
+    - name: Przeslanie pliku wejsciowego wsgi
+      tags:
+        - t22
+      copy:
+        src: ./wsgi.py
+        dest: /var/lib/lxc/{{ item }}/rootfs/root/flaskapp/
+      with_items:
+        - kontener1
+        - kontener2
+
+    - name: Przeslanie unitu systemd dla tworzonej aplikacji
+      tags:
+        - t3
+      copy:
+        src: ./flask.service
+        dest: /var/lib/lxc/{{ item }}/rootfs/etc/systemd/system/
+      with_items:
+        - kontener1
+        - kontener2
+
+    - name: Przeslanie pliku konfiguracyjnego nginxa
+      tags:
+        - t4
+      copy:
+        src: ./nginx.conf
+        dest: /var/lib/lxc/{{ item }}/rootfs/etc/nginx/
+      with_items:
+        - kontener1
+        - kontener2
+
+    - name: Uruchomienie aplikacji
+      tags:
+        - t5
+      community.general.lxc_container:
+        name: '{{ item }}'
+        state: started
+        container_command: |
+          chown -R root:www-data /root/flaskapp
+          chmod -R 775 /root/flaskapp
+          systemctl daemon-reload
+          systemctl enable --now flask
+          systemctl restart nginx
+      with_items:
+        - kontener1
+        - kontener2
