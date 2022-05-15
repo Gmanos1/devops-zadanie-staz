@@ -1,10 +1,26 @@
 # Blok 2
+## Treść zadania
+### **Blok 2 - Kubernetes** 
+Terraform - w ramach przyznanych darmowych srodków z GCP  
+1. zamów klaster kubernetes z 2 workerami (https://cloud.google.com/kubernetes engine) 
+2. Wykonaj komendę "kubectl get nodes -o wide" i jej wynik zachowaj w pliku i załącz  do odsyłanych odpowiedzi  
+3. Uruchom deployment Nginx w k8s z punktu 1 który: 
+    - będzie miał scale=2 
+    - będzie współdzielił dysk PV zamontowany w /var/www/data który będzie  zawierał stronę startową w nginx 
+4. Opublikuj deployment Nginx za pomocą k8s ingress 
+5. (*dodatkowe) zamów do opublikowanego adresu ingress certyfikat SSL Let's Encrypt.  Wykonaj komendę: 
+"kubectl describe secret \[nazwa-secretu-z-certyfikatem\]" 
+jej wynik załącz w odpowiedziach
+
+## Rozwiązanie
+#### **_Wyniki poleceń zostały wysłane w załączniku w emailu._**
 
 Link do strony głównej nginxa, z szyfrowaniem: 
 [https://zadanie-na-staz-devops.org/](https://zadanie-na-staz-devops.org/)
 
-Etapy konfiguracji klastra:
+Na GCP dodatkowo został dodatkowo zamówiony dysk PV, do zamontowania w nim wolumenu, statyczny adres IP dla kontrolera Ingress i nazwa domenowa.
 
+Etapy konfiguracji klastra:
 1. Nadanie uprawnień cluster-admin użytkownikowi
 ```
 kubectl create clusterrolebinding cluster-admin-binding \
