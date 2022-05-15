@@ -45,8 +45,6 @@
         executable: /bin/bash
 
     - name: Uruchomienie kontenerow, limit RAMu 1GB
-      tags:
-        - t
       environment:
         DOWNLOAD_KEYSERVER: "hkp://keyserver.ubuntu.com"
       community.general.lxc_container:
@@ -60,9 +58,7 @@
         - kontener1
         - kontener2
 
-    - name: Instalacja pakietow na kontenerach
-      tags:
-        - t11
+    - name: Instalacja pakietow do uruchomienia aplikacji na kontenerach
       community.general.lxc_container:
         name: '{{ item }}'
         container_command: |
@@ -79,8 +75,6 @@
         - kontener2
   
     - name: Przeslanie aplikacji na serwer
-      tags:
-        - t2
       copy:
         src: ./flaskapp.py
         dest: /var/lib/lxc/{{ item }}/rootfs/root/flaskapp/
@@ -89,8 +83,6 @@
         - kontener2
 
     - name: Przeslanie pliku wejsciowego wsgi
-      tags:
-        - t22
       copy:
         src: ./wsgi.py
         dest: /var/lib/lxc/{{ item }}/rootfs/root/flaskapp/
@@ -98,9 +90,7 @@
         - kontener1
         - kontener2
 
-    - name: Przeslanie unitu systemd dla tworzonej aplikacji
-      tags:
-        - t3
+    - name: Przeslanie unitu systemd dla aplikacji
       copy:
         src: ./flask.service
         dest: /var/lib/lxc/{{ item }}/rootfs/etc/systemd/system/
@@ -109,8 +99,6 @@
         - kontener2
 
     - name: Przeslanie pliku konfiguracyjnego nginxa
-      tags:
-        - t4
       copy:
         src: ./nginx.conf
         dest: /var/lib/lxc/{{ item }}/rootfs/etc/nginx/
@@ -119,8 +107,6 @@
         - kontener2
 
     - name: Uruchomienie aplikacji
-      tags:
-        - t5
       community.general.lxc_container:
         name: '{{ item }}'
         state: started
