@@ -1,5 +1,8 @@
 # Blok 2
 
+Link do strony głównej nginxa, z szyfrowaniem: 
+[https://zadanie-na-staz-devops.org/](https://zadanie-na-staz-devops.org/)
+
 Etapy konfiguracji klastra:
 
 1. Nadanie uprawnień cluster-admin użytkownikowi
@@ -24,8 +27,15 @@ kubectl apply -f k8s-service.yaml
 ```
 kubectl apply -f k8s-ingress.yaml
 ```
+6. Instalacja cert-managera
+```
 kubectl apply -f cert-manager.yaml 
-
+```
+7. Dodanie nowego dostawcy certyfikatów w oparciu o Let's Encrypt
+```
 kubectl apply -f k8s-cert-issuers.yaml
-
+```
+8. Utworzenie obiektu typu "Certificate", którego zadaniem jest wystawianie certyfikatów
+```
 kubectl apply -f k8s-certificate.yaml
+```
