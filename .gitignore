@@ -1,1 +1,5 @@
-./Blok1/inventory
+inventory
+**/.terraform/*
+*.terraform*
+*.tfstate
+*.tfstate.*
